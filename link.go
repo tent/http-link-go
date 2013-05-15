@@ -31,7 +31,7 @@ func Format(links []Link) string {
 		writeParam(buf, "rel", link.Rel)
 
 		keys := make([]string, 0, len(link.Params))
-		for k, _ := range link.Params {
+		for k := range link.Params {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
