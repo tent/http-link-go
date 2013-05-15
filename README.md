@@ -4,3 +4,9 @@ http-link-go implements parsing and serialization of Link header values as
 defined in [RFC 5988](https://tools.ietf.org/html/rfc5988).
 
 [**Documentation**](http://godoc.org/github.com/tent/http-link-go)
+
+## Installation
+
+```text
+go get github.com/tent/http-link-go
+```
