@@ -1,29 +1,34 @@
+// Package link implements parsing and serialization of Link header values as
+// defined in RFC 5988.
 package link
 
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"sort"
 	"unicode"
 )
 
-var _ = fmt.Println
-
 type Link struct {
-	URL    string
+	URI    string
+	Rel    string
 	Params map[string]string
 }
 
+// Format serializes a slice of Links into a header value. It does not currently
+// implement RFC 2231 handling of non-ASCII character encoding and language
+// information.
 func Format(links []Link) string {
 	buf := &bytes.Buffer{}
 	for i, link := range links {
 		if i > 0 {
-			buf.Write([]byte("; "))
+			buf.Write([]byte(", "))
 		}
 		buf.WriteByte('<')
-		buf.WriteString(link.URL)
+		buf.WriteString(link.URI)
 		buf.WriteByte('>')
+
+		writeParam(buf, "rel", link.Rel)
 
 		keys := make([]string, 0, len(link.Params))
 		for k, _ := range link.Params {
@@ -32,18 +37,24 @@ func Format(links []Link) string {
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			v := link.Params[k]
-			buf.Write([]byte("; "))
-			buf.WriteString(k)
-			buf.Write([]byte(`="`))
-			buf.WriteString(v)
-			buf.WriteByte('"')
+			writeParam(buf, k, link.Params[k])
 		}
 	}
 
 	return buf.String()
 }
 
+func writeParam(buf *bytes.Buffer, key, value string) {
+	buf.Write([]byte("; "))
+	buf.WriteString(key)
+	buf.Write([]byte(`="`))
+	buf.WriteString(value)
+	buf.WriteByte('"')
+}
+
+// Parse parses a Link header value into a slice of Links. It does not currently
+// implement RFC 2231 handling of non-ASCII character encoding and language
+// information.
 func Parse(l string) ([]Link, error) {
 	v := []byte(l)
 	v = bytes.TrimSpace(v)
@@ -62,7 +73,7 @@ func Parse(l string) ([]Link, error) {
 		}
 
 		params := make(map[string]string)
-		link := Link{URL: string(v[1:lend]), Params: params}
+		link := Link{URI: string(v[1:lend]), Params: params}
 		links = append(links, link)
 
 		// trim off parsed url
@@ -73,14 +84,15 @@ func Parse(l string) ([]Link, error) {
 		v = bytes.TrimLeftFunc(v, unicode.IsSpace)
 
 		for len(v) > 0 {
-			if v[0] != ';' {
-				return nil, errors.New("link: expected ;, got " + string(v[0:1]))
+			if v[0] != ';' && v[0] != ',' {
+				return nil, errors.New(`link: expected ";" or "'", got "` + string(v[0:1]) + `"`)
+			}
+			var next bool
+			if v[0] == ',' {
+				next = true
 			}
 			v = bytes.TrimLeftFunc(v[1:], unicode.IsSpace)
-			if len(v) == 0 {
-				break
-			}
-			if v[0] == '<' {
+			if next || len(v) == 0 {
 				break
 			}
 			var key, value []byte
@@ -88,7 +100,13 @@ func Parse(l string) ([]Link, error) {
 			if key == nil || value == nil {
 				return nil, errors.New("link: malformed param")
 			}
-			params[string(key)] = string(value)
+			if k := string(key); k == "rel" {
+				if links[len(links)-1].Rel == "" {
+					links[len(links)-1].Rel = string(value)
+				}
+			} else {
+				params[k] = string(value)
+			}
 			v = bytes.TrimLeftFunc(v, unicode.IsSpace)
 		}
 	}

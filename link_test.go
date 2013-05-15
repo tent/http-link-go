@@ -20,13 +20,13 @@ var linkParseTests = []struct {
 }{
 	{
 		"<http://example.com/TheBook/chapter2>; rel=\"previous\";\n    title=\"previous chapter\"",
-		[]Link{{"http://example.com/TheBook/chapter2", map[string]string{"rel": "previous", "title": "previous chapter"}}},
+		[]Link{{URI: "http://example.com/TheBook/chapter2", Rel: "previous", Params: map[string]string{"title": "previous chapter"}}},
 	},
 	{
-		"</TheBook/chapter2>;\n rel=\"previous\"; title*=UTF-8'de'letztes%20Kapitel;\n </TheBook/chapter4>;\n rel=\"next\"; title*=UTF-8'de'n%c3%a4chstes%20Kapitel",
+		"</TheBook/chapter2>;\n rel=\"previous\"; title*=UTF-8'de'letztes%20Kapitel,\n </TheBook/chapter4>;\n rel=\"next\"; title*=UTF-8'de'n%c3%a4chstes%20Kapitel",
 		[]Link{
-			{"/TheBook/chapter2", map[string]string{"rel": "previous", "title*": "UTF-8'de'letztes%20Kapitel"}},
-			{"/TheBook/chapter4", map[string]string{"rel": "next", "title*": "UTF-8'de'n%c3%a4chstes%20Kapitel"}},
+			{URI: "/TheBook/chapter2", Rel: "previous", Params: map[string]string{"title*": "UTF-8'de'letztes%20Kapitel"}},
+			{URI: "/TheBook/chapter4", Rel: "next", Params: map[string]string{"title*": "UTF-8'de'n%c3%a4chstes%20Kapitel"}},
 		},
 	},
 }
@@ -44,12 +44,14 @@ var linkFormatTests = []struct {
 	out string
 }{
 	{
-		[]Link{{"/a", map[string]string{"a": "b", "c": "d"}}},
-		`</a>; a="b"; c="d"`,
+		[]Link{{URI: "/a", Rel: "foo", Params: map[string]string{"a": "b", "c": "d"}}},
+		`</a>; rel="foo"; a="b"; c="d"`,
 	},
 	{
-		[]Link{{"/b", map[string]string{"a": "b", "c": "d"}}, {"/a", map[string]string{"a": "b", "c": "d"}}},
-		`</b>; a="b"; c="d"; </a>; a="b"; c="d"`,
+		[]Link{
+			{URI: "/b", Rel: "foo", Params: map[string]string{"a": "b", "c": "d"}},
+			{URI: "/a", Rel: "foo", Params: map[string]string{"a": "b", "c": "d"}}},
+		`</b>; rel="foo"; a="b"; c="d", </a>; rel="foo"; a="b"; c="d"`,
 	},
 }
 
